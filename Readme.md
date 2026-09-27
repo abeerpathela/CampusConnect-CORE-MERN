@@ -11,7 +11,8 @@
 > **Institution:** Chitkara University, Himachal Pradesh  
 
 
-![Uploading image.png…]()
+<img width="1918" height="909" alt="image" src="https://github.com/user-attachments/assets/36e2d2ac-d5e1-4288-adc9-6d350f053025" />
+
 
 ---
 
