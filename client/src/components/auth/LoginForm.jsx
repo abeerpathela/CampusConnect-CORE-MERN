@@ -63,16 +63,23 @@ export default function LoginForm() {
     }
   };
 
-  const handleQuickDemo = (role) => {
-    switchDemoRole(role);
-    showToast(
-      `Logged in as ${role === USER_ROLES.ADMIN ? 'Admin (Dean of Student Affairs)' : 'Student (Aarav Sharma)'}`,
-      'success'
-    );
-    if (role === USER_ROLES.ADMIN) {
-      navigate('/admin/dashboard');
-    } else {
-      navigate('/student/dashboard');
+  const handleQuickDemo = async (role) => {
+    setLoading(true);
+    try {
+      const res = await switchDemoRole(role);
+      showToast(
+        `Logged in as ${role === USER_ROLES.ADMIN ? 'Admin (Dean of Student Affairs)' : 'Student (Aarav Sharma)'}`,
+        'success'
+      );
+      if (role === USER_ROLES.ADMIN) {
+        navigate('/admin/dashboard');
+      } else {
+        navigate(from === '/admin/dashboard' ? '/student/dashboard' : from);
+      }
+    } catch (err) {
+      showToast(err.message || 'Demo login failed', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 

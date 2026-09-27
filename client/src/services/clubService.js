@@ -10,53 +10,55 @@ function usesOfficialClubNames(clubs) {
 
 export const clubService = {
   getAllClubs: async (filters = {}) => {
+    let clubs = [];
     try {
       const res = await api.get('/clubs', { params: filters });
-      const clubsFromApi = res.data;
-      const unfiltered =
-        (!filters.category || filters.category === 'All') && !filters.search;
-      if (
-        !usesOfficialClubNames(clubsFromApi) ||
-        (unfiltered && clubsFromApi.length !== INITIAL_CLUBS.length)
-      ) {
-        throw new Error('Stale club payload');
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        return res.data;
       }
-      return clubsFromApi;
     } catch {
-      let clubs = storageHelper.get(STORAGE_KEYS.CLUBS);
-
-      if (filters.category && filters.category !== 'All') {
-        clubs = clubs.filter(
-          (c) => c.category.toLowerCase() === filters.category.toLowerCase()
-        );
-      }
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        clubs = clubs.filter(
-          (c) =>
-            c.name.toLowerCase().includes(q) ||
-            c.tagline?.toLowerCase().includes(q) ||
-            c.description.toLowerCase().includes(q) ||
-            c.tags?.some((t) => t.toLowerCase().includes(q))
-        );
-      }
-      return clubs;
+      // Graceful fallback
     }
+
+    clubs = storageHelper.get(STORAGE_KEYS.CLUBS);
+    if (!Array.isArray(clubs) || clubs.length === 0) {
+      clubs = [...INITIAL_CLUBS];
+      storageHelper.set(STORAGE_KEYS.CLUBS, clubs);
+    }
+
+    if (filters.category && filters.category !== 'All') {
+      clubs = clubs.filter(
+        (c) => c.category?.toLowerCase() === filters.category.toLowerCase()
+      );
+    }
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      clubs = clubs.filter(
+        (c) =>
+          c.name?.toLowerCase().includes(q) ||
+          c.tagline?.toLowerCase().includes(q) ||
+          c.description?.toLowerCase().includes(q) ||
+          c.tags?.some((t) => t.toLowerCase().includes(q))
+      );
+    }
+    return clubs;
   },
 
   getClubById: async (id) => {
     try {
       const res = await api.get(`/clubs/${id}`);
-      if (!res.data || !OFFICIAL_CLUB_NAMES.has(res.data.name)) {
-        throw new Error('Stale club payload');
-      }
-      return res.data;
+      if (res.data) return res.data;
     } catch {
-      const clubs = storageHelper.get(STORAGE_KEYS.CLUBS);
-      const club = clubs.find((c) => c._id === id || c.slug === id);
-      if (!club) throw new Error('Club not found');
-      return club;
+      // Fallback
     }
+
+    let clubs = storageHelper.get(STORAGE_KEYS.CLUBS);
+    if (!Array.isArray(clubs) || clubs.length === 0) {
+      clubs = [...INITIAL_CLUBS];
+    }
+    const club = clubs.find((c) => c._id === id || c.slug === id);
+    if (!club) throw new Error('Club not found');
+    return club;
   },
 
   createClub: async (clubData) => {
@@ -113,10 +115,14 @@ export const clubService = {
   joinClub: async (clubId, user) => {
     try {
       const res = await api.post(`/clubs/${clubId}/join`);
+      if (res.data && res.data.user) {
+        localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(res.data.user));
+      }
       return res.data;
     } catch {
-      const clubs = storageHelper.get(STORAGE_KEYS.CLUBS);
-      const index = clubs.findIndex((c) => c._id === clubId);
+      // Gracefully perform local join so the user experience is 100% reliable
+      const clubs = storageHelper.get(STORAGE_KEYS.CLUBS) || [...INITIAL_CLUBS];
+      const index = clubs.findIndex((c) => c._id === clubId || c.slug === clubId);
       if (index !== -1) {
         clubs[index].membersCount = (clubs[index].membersCount || 0) + 1;
         storageHelper.set(STORAGE_KEYS.CLUBS, clubs);
@@ -125,9 +131,12 @@ export const clubService = {
       // Update current user
       if (user) {
         const joinedClubs = user.joinedClubs || [];
-        if (!joinedClubs.includes(clubId)) {
+        const isAlreadyMember = joinedClubs.some((c) =>
+          typeof c === 'object' && c !== null ? c._id === clubId || c.slug === clubId : c === clubId
+        );
+        if (!isAlreadyMember) {
           const updatedUser = { ...user, joinedClubs: [...joinedClubs, clubId] };
-          storageHelper.set(STORAGE_KEYS.AUTH_USER, updatedUser);
+          localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(updatedUser));
           return { success: true, user: updatedUser, message: 'Joined club successfully!' };
         }
       }
@@ -138,19 +147,25 @@ export const clubService = {
   leaveClub: async (clubId, user) => {
     try {
       const res = await api.post(`/clubs/${clubId}/leave`);
+      if (res.data && res.data.user) {
+        localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(res.data.user));
+      }
       return res.data;
     } catch {
-      const clubs = storageHelper.get(STORAGE_KEYS.CLUBS);
-      const index = clubs.findIndex((c) => c._id === clubId);
+      // Gracefully perform local leave
+      const clubs = storageHelper.get(STORAGE_KEYS.CLUBS) || [...INITIAL_CLUBS];
+      const index = clubs.findIndex((c) => c._id === clubId || c.slug === clubId);
       if (index !== -1 && clubs[index].membersCount > 0) {
         clubs[index].membersCount -= 1;
         storageHelper.set(STORAGE_KEYS.CLUBS, clubs);
       }
 
       if (user) {
-        const joinedClubs = (user.joinedClubs || []).filter((id) => id !== clubId);
+        const joinedClubs = (user.joinedClubs || []).filter((c) =>
+          typeof c === 'object' && c !== null ? (c._id !== clubId && c.slug !== clubId) : c !== clubId
+        );
         const updatedUser = { ...user, joinedClubs };
-        storageHelper.set(STORAGE_KEYS.AUTH_USER, updatedUser);
+        localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(updatedUser));
         return { success: true, user: updatedUser, message: 'Left club successfully' };
       }
       return { success: true, message: 'Left club successfully' };

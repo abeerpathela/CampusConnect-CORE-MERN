@@ -1,0 +1,19 @@
+{
+  "name": "campusconnect-root",
+  "version": "1.0.0",
+  "description": "CampusConnect - Centralized Campus Club & Event Management Portal",
+  "private": true,
+  "scripts": {
+    "server": "npm --prefix server start",
+    "server:dev": "npm --prefix server run dev",
+    "client": "npm --prefix client run dev",
+    "seed": "npm --prefix server run seed",
+    "test": "npm --prefix server test"
+  },
+  "keywords": [
+    "campusconnect",
+    "mern"
+  ],
+  "author": "CampusConnect Team",
+  "license": "MIT"
+}

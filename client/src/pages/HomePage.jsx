@@ -40,6 +40,7 @@ export default function HomePage() {
     };
     loadHomeData();
   }, []);
+  
 
   const stats = {
     clubs: allClubs.length || 18,

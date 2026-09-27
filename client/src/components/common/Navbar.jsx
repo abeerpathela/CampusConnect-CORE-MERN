@@ -30,9 +30,9 @@ export default function Navbar() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const isHome = location.pathname === '/';
 
-  const handleRoleToggle = () => {
+  const handleRoleToggle = async () => {
     const nextRole = isAdmin ? USER_ROLES.STUDENT : USER_ROLES.ADMIN;
-    switchDemoRole(nextRole);
+    await switchDemoRole(nextRole);
     showToast(
       `Switched to ${nextRole === USER_ROLES.ADMIN ? 'Admin (Dean/Faculty)' : 'Student'} mode`,
       'info'
@@ -115,6 +115,28 @@ export default function Navbar() {
           </nav>
 
           <div className="flex items-center gap-2">
+            {/* Quick 1-Click Demo Toggle Button */}
+            <button
+              type="button"
+              onClick={handleRoleToggle}
+              title="Click to switch between Student & Admin Demo View"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 hover:bg-[#1e3a5f]/10 text-slate-700 hover:text-[#1e3a5f] border border-slate-200 transition-all cursor-pointer shadow-xs"
+            >
+              {isAdmin ? (
+                <>
+                  <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                  <span className="hidden sm:inline">Admin Mode</span>
+                  <span className="text-[10px] text-[#1e3a5f] font-bold underline">Switch to Student</span>
+                </>
+              ) : (
+                <>
+                  <GraduationCap className="w-3.5 h-3.5 text-[#1e3a5f]" />
+                  <span className="hidden sm:inline">Student Mode</span>
+                  <span className="text-[10px] text-purple-700 font-bold underline">Switch to Admin</span>
+                </>
+              )}
+            </button>
+
             {isAuthenticated && (
               <Link
                 to={isAdmin ? '/admin/dashboard' : '/student/dashboard'}

@@ -24,8 +24,11 @@ export default function EventCard({ event, onEventUpdated, onSelectEvent }) {
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [generatedTicket, setGeneratedTicket] = useState(null);
 
-  const isRegistered =
-    user?.registeredEvents?.includes(event._id) || event.userRegistered;
+  const isRegistered = Boolean(
+    user?.registeredEvents?.some((e) =>
+      typeof e === 'object' && e !== null ? e._id === event._id : e === event._id
+    ) || event.userRegistered
+  );
 
   const capacity = event.capacity || 100;
   const registeredCount = event.registeredCount || 0;
@@ -69,12 +72,18 @@ export default function EventCard({ event, onEventUpdated, onSelectEvent }) {
     if (isRegistered) {
       try {
         const userRegistrations = await eventService.getUserRegistrations(user._id, user.email);
-        const match = userRegistrations.find((r) => r.eventId === event._id);
+        const match = Array.isArray(userRegistrations)
+          ? userRegistrations.find((r) =>
+              typeof r.eventId === 'object' && r.eventId !== null
+                ? r.eventId._id === event._id
+                : r.eventId === event._id
+            )
+          : null;
         if (match) {
           setGeneratedTicket(match);
           setTicketModalOpen(true);
         } else {
-          showToast('Already registered! Check your dashboard for the ticket pass.', 'info');
+          showToast('Already registered! Pass is in your dashboard.', 'info');
         }
       } catch {
         showToast('Ticket pass active in dashboard', 'info');

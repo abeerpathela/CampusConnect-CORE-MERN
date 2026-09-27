@@ -10,7 +10,14 @@ import { Users, CheckCircle, ArrowUpRight, Sparkles } from 'lucide-react';
 export default function ClubCard({ club, onClubUpdated, compact = false }) {
   const { user, isAuthenticated, updateUserProfile } = useAuth();
   const { showToast } = useAlert();
-  const isMember = user?.joinedClubs?.includes(club._id);
+  
+  const isMember = Boolean(
+    user?.joinedClubs?.some((c) =>
+      typeof c === 'object' && c !== null
+        ? (c._id === club._id || c._id === club.slug || c.slug === club.slug)
+        : (c === club._id || c === club.slug)
+    )
+  );
 
   const handleJoin = async (e) => {
     e.preventDefault();

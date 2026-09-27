@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth from localStorage
+  // Initialize auth from localStorage, defaulting to Demo Student for immediate access
   useEffect(() => {
     try {
       const storedToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
@@ -19,7 +19,6 @@ export const AuthProvider = ({ children }) => {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
       } else {
-        // Default to demo student for an instant smooth first impression
         const defaultStudent = DEMO_USERS.STUDENT;
         const defaultToken = 'jwt_demo_student_token';
         localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, defaultToken);
@@ -64,19 +63,31 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
   };
 
-  const switchDemoRole = (role) => {
-    if (role === USER_ROLES.ADMIN) {
-      const admin = DEMO_USERS.ADMIN;
-      localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, 'jwt_demo_admin_token');
-      localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(admin));
-      setUser(admin);
-      setToken('jwt_demo_admin_token');
-    } else {
-      const student = DEMO_USERS.STUDENT;
-      localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, 'jwt_demo_student_token');
-      localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(student));
-      setUser(student);
-      setToken('jwt_demo_student_token');
+  const switchDemoRole = async (role) => {
+    setLoading(true);
+    try {
+      const email =
+        role === USER_ROLES.ADMIN
+          ? 'admin@chitkara.edu.in'
+          : 'student@chitkara.edu.in';
+      const password = 'password123';
+
+      const res = await authService.login({ email, password, role });
+      setUser(res.user);
+      setToken(res.token);
+      return res;
+    } catch {
+      // Fallback if backend offline
+      const fallbackUser =
+        role === USER_ROLES.ADMIN ? DEMO_USERS.ADMIN : DEMO_USERS.STUDENT;
+      const mockToken = `jwt_demo_${role}_token`;
+      localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, mockToken);
+      localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(fallbackUser));
+      setUser(fallbackUser);
+      setToken(mockToken);
+      return { user: fallbackUser, token: mockToken };
+    } finally {
+      setLoading(false);
     }
   };
 

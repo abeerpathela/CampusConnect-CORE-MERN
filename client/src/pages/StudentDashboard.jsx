@@ -44,11 +44,17 @@ export default function StudentDashboard() {
     try {
       const allClubs = await clubService.getAllClubs();
       const userClubIds = user.joinedClubs || [];
-      const userClubs = allClubs.filter((c) => userClubIds.includes(c._id));
+      const userClubs = allClubs.filter((c) =>
+        userClubIds.some((uc) =>
+          typeof uc === 'object' && uc !== null
+            ? (uc._id === c._id || uc.slug === c.slug || uc._id === c.slug)
+            : (uc === c._id || uc === c.slug)
+        )
+      );
       setJoinedClubsList(userClubs);
 
       const userRegs = await eventService.getUserRegistrations(user._id, user.email);
-      setMyRegistrations(userRegs);
+      setMyRegistrations(Array.isArray(userRegs) ? userRegs : []);
     } catch (err) {
       console.error('Error loading student dashboard data', err);
     }
